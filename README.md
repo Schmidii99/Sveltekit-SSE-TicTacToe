@@ -1,8 +1,10 @@
 ## Use this project
 
-Clone this project
-
 ```bash
+# clone this project
+git clone https://github.com/Schmidii99/Brettspiele.io.git
+cd brettspiele.io
+
 # install all dependecies
 npm install
 
