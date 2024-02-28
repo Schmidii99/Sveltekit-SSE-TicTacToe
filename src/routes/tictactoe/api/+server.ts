@@ -34,13 +34,17 @@ export function GET({ url }) {
         game?.start(session);
     }
 
+    let symbol = null;
+    if (game?.playerOneSession == session) { symbol = game?.playerOneSymbol; }
+    if (game?.playerTwoSession == session) { symbol = game?.playerTwoSymbol; }
+
 	return json(
         {
             "gameState": game?.gameState,
             "gameStarted": game?.gameStarted,
-            "yourTurn": game?.currentPlayer,
+            "yourTurn": game?.currentPlayer == session,
             "spectator": session != game?.playerOneSession && session != game?.playerTwoSession,
-            "test": game
+            "yourSymbol": symbol 
         }
     );
 }
