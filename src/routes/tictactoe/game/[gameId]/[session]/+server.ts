@@ -34,3 +34,8 @@ export async function POST({ request, params }) {
         }
     })
 }
+
+// This handler will respond to PATCH, DELETE, etc.
+export async function fallback({ request }) {
+	return error(405, `Method ${request.method} not allowed!`);
+}

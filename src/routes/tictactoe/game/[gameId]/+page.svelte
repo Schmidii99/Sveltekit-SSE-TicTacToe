@@ -14,12 +14,12 @@
             "symbol": string | null } | null = null;
 
     let gameState: number[][] = [];
-    let recievedState: any = null;
 
     $: if (data.gameId != null && browser){
             console.log("sourcing");
-            const connection = source(`/tictactoe/game/${data.gameId}/${getSession()}/`, {close() {
-                console.log("Connection to server closed!");
+            const connection = source(`/tictactoe/game/${data.gameId}/${getSession()}/`, {close({connect}) {
+                console.log("Connection to server closed! Reconnecting...");
+                connect();
             }})
             connection.select("gameState").json<number[][]>().subscribe(gs => {
                 if (gs != null) {
@@ -30,6 +30,8 @@
                 gameInfo = gi;
             });
     }
+
+    $: console.log(gameInfo);
 
     // handle button click
     function handleButtonClick(row: number, col: number) {

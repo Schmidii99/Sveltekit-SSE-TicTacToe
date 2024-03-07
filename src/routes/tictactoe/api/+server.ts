@@ -17,11 +17,10 @@ export function GET({ url }) {
     return json(`/tictactoe/game/${link}/`);
 }
 
-export async function POST({ request, params }) {	
+export async function POST({ request }) {	
     let postData: any = null;
     // extract post data
     await request.json().then(e => postData = e);
-    console.log(postData);
 
     if (postData["gameId"] == null || postData["session"] == null) { error(400, "gameId or session not set!"); }
     const recievedSession = postData["session"];
@@ -40,16 +39,19 @@ export async function POST({ request, params }) {
     const row = postData["row"];
     const col = postData["column"];
     const currentState: number[][] = recievedGame.gameState;
+
     if (currentState[row][col] != 0) {
         error(400, "invalid position!");
     }
 
-    recievedGame!.updateGameState(currentState.slice()[row][col] = recievedGame.currentPlayer == recievedGame.playerOne ? 1 : 2);
+    recievedGame!.updateGameState(row, col, recievedGame.currentPlayer?.session == recievedGame.playerOne?.session ? 1 : 2);
 
-    return json({"Info": "All criteria set correctly"});
+    recievedGame.informPlayer();
+
+    return new Response(null, { status: 202 });
 }
 
 // This handler will respond to PATCH, DELETE, etc.
 export async function fallback({ request }) {
-	return text(`Method ${request.method} not supported!`);
+	return error(405, `Method ${request.method} not allowed!`);
 }
