@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import type { TwoPlayerGame } from '$lib/TwoPlayerGame.js';
+	import type { GameInfo, TwoPlayerGame } from '$lib/TwoPlayerGame.js';
 	import { getSession } from '$lib/sessionManager.js';
 	import { source } from 'sveltekit-sse';
     import type { PageData } from './$types.js';
@@ -15,15 +15,20 @@
 
     let gameState: number[][] = [];
     let recievedState: any = null;
-    let recievedInfo: any = null;
 
     $: if (data.gameId != null && browser){
             console.log("sourcing");
             const connection = source(`/tictactoe/game/${data.gameId}/${getSession()}/`, {close() {
                 console.log("Connection to server closed!");
             }})
-            recievedState = connection.select("gameState");
-            recievedInfo = connection.select("gameInfo");
+            connection.select("gameState").json<number[][]>().subscribe(gs => {
+                if (gs != null) {
+                    gameState = gs;
+                }
+            });
+            connection.select("gameInfo").json<GameInfo>().subscribe(gi => {
+                gameInfo = gi;
+            });
     }
 
     // handle button click
@@ -45,10 +50,6 @@
         }).then(res => res.json().then(js => console.log(js)));
     }
 </script>
-
-{$recievedState}
-<br>
-{$recievedInfo}
 
 {#if gameInfo != null && gameInfo.spectator}
     <div class="flex justify-center">

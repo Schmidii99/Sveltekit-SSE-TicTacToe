@@ -49,7 +49,7 @@ export class TwoPlayerGame {
         if (session === this.playerOne?.session || session === this.playerTwo?.session) {
             spectator = false;
         }
-        
+
         let symbol: string | null = null;
         if (session === this.playerOne?.session) {
             symbol = this.playerOne.symbol;
@@ -66,7 +66,7 @@ export class TwoPlayerGame {
     }
 }
 
-type GameInfo = {
+export type GameInfo = {
     gameStarted:    boolean,
     yourTurn:       boolean,
     spectator:      boolean 

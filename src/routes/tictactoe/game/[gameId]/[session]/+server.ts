@@ -14,15 +14,20 @@ export async function POST({ request, params }) {
             if (!currentGames.has(params.gameId)) { error(404, "Game not found!"); }
 
             const game = currentGames.get(params.gameId)!;
-            if (game.playerOne == null) {
+            // player one
+            if (game.playerOne == null || game.playerOne.session == params.session) {
                 game.playerOne = new Client(emit, params.session);
-            } else {
+            }
+            // player two && game not started 
+            else if (!game.gameStarted) {
                 game.start(emit, params.session);
                 console.log("Game started!");
                 game.playerOne.send("gameInfo", JSON.stringify(game.getGameInfo(game.playerOne.session)));
             }
             emit("gameInfo", JSON.stringify(game.getGameInfo(params.session)));
             emit("gameState", JSON.stringify(game!.gameState));
+
+            emit("test", JSON.stringify(game));
         },
         cancel() {
             console.log("Connection cancelled");
