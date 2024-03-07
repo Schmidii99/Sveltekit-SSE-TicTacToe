@@ -2,68 +2,73 @@
 	import { browser } from '$app/environment';
 	import type { TwoPlayerGame } from '$lib/TwoPlayerGame.js';
 	import { getSession } from '$lib/sessionManager.js';
+	import { source } from 'sveltekit-sse';
     import type { PageData } from './$types.js';
     import { onMount } from 'svelte';
 
     export let data: PageData;
 
-    let game: { "gameState": any,
-            "gameStarted": boolean,
+    let gameInfo: { "gameStarted": boolean,
             "yourTurn": boolean,
             "spectator": boolean 
             "symbol": string | null } | null = null;
 
-    // fetch game
-    async function fetchGame() {
-        if (data.gameId && browser) {
-            fetch(`/tictactoe/api?session=${getSession()}&gameId=${data.gameId}`)
-                .then(response => {
-                    if (response.status == 404) { throw Error("Game not found") }
+    let gameState: number[][] = [];
+    let recievedState: any = null;
+    let recievedInfo: any = null;
 
-                    response.json()
-                    .then((js: any) => {
-                        game = js;
-                    })
-                }
-            ).catch(err => {
-                alert("Game not found!");
-                clearInterval(timerId);
-            })
-        }   
+    $: if (data.gameId != null && browser){
+            console.log("sourcing");
+            const connection = source(`/tictactoe/game/${data.gameId}/${getSession()}/`, {close() {
+                console.log("Connection to server closed!");
+            }})
+            recievedState = connection.select("gameState");
+            recievedInfo = connection.select("gameInfo");
     }
-
-    // create timer for polling the gameState
-    let timerId: number = 0;
-    onMount(() => {
-        timerId = setInterval(fetchGame, 500);
-        fetchGame();
-    });
 
     // handle button click
     function handleButtonClick(row: number, col: number) {
-        console.log("Button clicked in Row: " + row + " - Column: " + col);
+        if (gameInfo?.spectator || !gameInfo?.yourTurn)
+            return;
+        
+        fetch("/tictactoe/api/", {
+            method: "POST",
+            body: JSON.stringify({
+                gameId: data.gameId,
+                session: getSession(),
+                column: col,
+                row: row
+            }),
+            headers: {
+                "Content-type": "application/json; charset=UTF-8"
+            }
+        }).then(res => res.json().then(js => console.log(js)));
     }
 </script>
 
-{#if game != null && game.spectator}
+{$recievedState}
+<br>
+{$recievedInfo}
+
+{#if gameInfo != null && gameInfo.spectator}
     <div class="flex justify-center">
         <h2 class=" underline text-2xl">You are spectating the game!</h2>
     </div>
 {/if}
 
-{#if game != null && game.yourTurn}
+{#if gameInfo != null && gameInfo.yourTurn}
     <div class="flex justify-center">
         <h2 class=" underline text-xl">Your Turn</h2>
     </div>
-{:else if game != null && game?.gameStarted && !game.yourTurn && !game.spectator}
+{:else if gameInfo != null && gameInfo?.gameStarted && !gameInfo.yourTurn && !gameInfo.spectator}
     <div class="flex justify-center">
         <h2 class=" underline text-xl">Opponents Turn</h2>
     </div>
 {/if}
 
-{#if game != null && game.gameStarted}
+{#if gameInfo != null && gameInfo.gameStarted}
     <div class=" w-full h-full space-y-3 mt-5">
-        {#each game.gameState as row, rowIndex (rowIndex)}
+        {#each gameState as row, rowIndex (rowIndex)}
             <div class="flex justify-center items-center space-x-3">
                 {#each row as col, colIndex (colIndex)}
                     <button class=" bg-gray-300 rounded-lg lg:rounded-2xl box sm:text-2xl md:text-5xl lg:text-8xl"
@@ -78,7 +83,7 @@
 {/if}
 
 
-{#if game != null && !game?.gameStarted}
+{#if gameInfo != null && !gameInfo?.gameStarted}
     <div class="waiting-popup sm:rounded-lg md:rounded-xl lg:rounded-3xl bg-gray-300">
         <div class="mt-5">
             Waiting for opponent...
