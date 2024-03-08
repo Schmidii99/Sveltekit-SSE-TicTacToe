@@ -84,7 +84,11 @@
             headers: {
                 "Content-type": "application/json; charset=UTF-8"
             }
-        }).then(res => res.json().then(js => console.log(js)));
+        }).then(response => {
+            if (!response.ok) {
+                console.log("Error when submitting data!\n" + response.status + " " + response.statusText);
+            }
+        });
     }
 </script>
 
