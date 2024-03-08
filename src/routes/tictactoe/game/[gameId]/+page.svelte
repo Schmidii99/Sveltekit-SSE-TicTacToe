@@ -1,25 +1,24 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import type { GameInfo, TwoPlayerGame } from '$lib/TwoPlayerGame.js';
+	import type { GameInfo } from '$lib/TwoPlayerGame.js';
 	import { getSession } from '$lib/sessionManager.js';
 	import { source } from 'sveltekit-sse';
     import type { PageData } from './$types.js';
-    import { onMount } from 'svelte';
 
     export let data: PageData;
 
-    let gameInfo: { "gameStarted": boolean,
-            "yourTurn": boolean,
-            "spectator": boolean 
-            "symbol": string | null } | null = null;
-
+    let gameInfo: GameInfo | null = null;
     let gameState: number[][] = [];
+    let winner: string | null = null;
 
-    $: if (data.gameId != null && browser){
-            console.log("sourcing");
+    $: if (data.gameId != null && browser && gameInfo == null){
             const connection = source(`/tictactoe/game/${data.gameId}/${getSession()}/`, {close({connect}) {
-                console.log("Connection to server closed! Reconnecting...");
-                connect();
+                if (calculateWinner() == null) {
+                    console.log("Connection to server closed! Reconnecting...");
+                    connect();
+                } else {
+                    console.log("Connection to server closed! Game over!");
+                }
             }})
             connection.select("gameState").json<number[][]>().subscribe(gs => {
                 if (gs != null) {
@@ -27,15 +26,51 @@
                 }
             });
             connection.select("gameInfo").json<GameInfo>().subscribe(gi => {
-                gameInfo = gi;
+                if (gi != null) {
+                    gameInfo = gi;
+                }
             });
     }
 
-    $: console.log(gameInfo);
+    // check for winner
+    $: if (browser && gameState.length > 0) {
+        winner = calculateWinner();
+    }
+
+    function calculateWinner(): null | string {
+        for (let i = 0; i < 3; i++) {
+            // row
+            if (gameState[i][0] === gameState[i][1] && gameState[i][1] === gameState[i][2] && gameState[i][0] !== 0) {
+                return gameState[i][0] === 1 ? "X" : "O";
+            }
+            // row
+            if (gameState[0][i] === gameState[1][i] && gameState[1][i] === gameState[i][2] && gameState[0][i] !== 0) {
+                return gameState[0][i] === 1 ? "X" : "O";
+            }
+        }
+        // diagonal
+        if (gameState[0][0] === gameState[1][1] && gameState[1][1] === gameState[2][2] && gameState[0][0] !== 0) {
+            return gameState[0][0] === 1 ? "X" : "O";
+        }
+        if (gameState[0][2] === gameState[1][1] && gameState[1][1] === gameState[2][0] && gameState[0][2] !== 0) {
+            return gameState[0][2] === 1 ? "X" : "O";
+        }
+
+        // check for draw
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (gameState[i][j] === 0) {
+                    return null;
+                }
+            }
+        }
+
+        return "-";
+    }
 
     // handle button click
     function handleButtonClick(row: number, col: number) {
-        if (gameInfo?.spectator || !gameInfo?.yourTurn)
+        if (gameInfo?.spectator || !gameInfo?.yourTurn || winner != null)
             return;
         
         fetch("/tictactoe/api/", {
@@ -59,15 +94,21 @@
     </div>
 {/if}
 
-{#if gameInfo != null && gameInfo.yourTurn}
-    <div class="flex justify-center">
-        <h2 class=" underline text-xl">Your Turn</h2>
-    </div>
-{:else if gameInfo != null && gameInfo?.gameStarted && !gameInfo.yourTurn && !gameInfo.spectator}
-    <div class="flex justify-center">
-        <h2 class=" underline text-xl">Opponents Turn</h2>
-    </div>
-{/if}
+<div class="flex justify-center text-center">
+    <h2 class="text-xl">
+        {#if gameInfo != null && gameInfo.symbol != null}
+            Your symbol: {gameInfo.symbol}
+            <br>
+        {/if}
+        {#if gameInfo != null && gameInfo.yourTurn && winner == null}
+            Your Turn
+        {:else if gameInfo != null && gameInfo?.gameStarted && !gameInfo.yourTurn && !gameInfo.spectator && winner == null}
+            Opponents Turn
+        {:else if winner != null}
+            Player {winner} Wins!
+        {/if}
+    </h2>
+</div>
 
 {#if gameInfo != null && gameInfo.gameStarted}
     <div class=" w-full h-full space-y-3 mt-5">
