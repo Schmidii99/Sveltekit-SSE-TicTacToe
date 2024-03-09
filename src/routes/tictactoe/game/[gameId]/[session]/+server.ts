@@ -24,6 +24,9 @@ export async function POST({ request, params }) {
                 console.log("Game started!");
                 game.playerOne.send("gameInfo", JSON.stringify(game.getGameInfo(game.playerOne.session)));
             }
+            if (game.playerOne != null && game.playerTwo != null && game.playerOne.session != params.session && game.playerTwo.session != params.session) {
+                game.spectators.push(new Client(emit, params.session));
+            }
             emit("gameInfo", JSON.stringify(game.getGameInfo(params.session)));
             emit("gameState", JSON.stringify(game!.gameState));
 
@@ -31,6 +34,15 @@ export async function POST({ request, params }) {
         },
         cancel() {
             console.log("Connection cancelled");
+            if (currentGames.has(params.gameId)) {
+                const game = currentGames.get(params.gameId)!;
+                const toFind = (client: Client) => client.session === params.session;
+                const index = game.spectators.findIndex(toFind);
+                if (index > -1) {
+                    game.spectators.splice(index, 1);
+                    console.log("Removed spectator");
+                }
+            }
         }
     })
 }

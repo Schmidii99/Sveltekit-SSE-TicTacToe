@@ -5,8 +5,9 @@ export class TwoPlayerGame {
     playerTwo: Client | null = null;
     // 0 is empty - 1 is player One - 2 is player Two
     gameState: number[][];
-    gameStarted: boolean
-    currentPlayer: Client | null
+    gameStarted: boolean;
+    currentPlayer: Client | null;
+    spectators: Client[] = [];
 
     constructor(startState: any) {
         this.gameState = startState;
@@ -64,7 +65,8 @@ export class TwoPlayerGame {
             gameStarted: this.gameStarted, 
             yourTurn: yourTurn, 
             spectator: spectator, 
-            symbol: symbol 
+            symbol: symbol,
+            spectatorCount: this.spectators.length
         };
     }
 
@@ -77,12 +79,17 @@ export class TwoPlayerGame {
             this.playerTwo.send("gameInfo", JSON.stringify(this.getGameInfo(this.playerTwo.session)));
             this.playerTwo.send("gameState", JSON.stringify(this.gameState));
         }
+        this.spectators.forEach((spectator) => {
+            spectator.send("gameInfo", JSON.stringify(this.getGameInfo(spectator.session)));
+            spectator.send("gameState", JSON.stringify(this.gameState));
+        });
     }
 }
 
 export type GameInfo = {
-    gameStarted:    boolean,
-    yourTurn:       boolean,
-    spectator:      boolean 
-    symbol:         string | null 
+    gameStarted:    boolean;
+    yourTurn:       boolean;
+    spectator:      boolean;
+    symbol:         string | null;
+    spectatorCount: number;
 }
