@@ -46,7 +46,7 @@
                 return gameState[i][0] === 1 ? "X" : "O";
             }
             // row
-            if (gameState[0][i] === gameState[1][i] && gameState[1][i] === gameState[i][2] && gameState[0][i] !== 0) {
+            if (gameState[0][i] === gameState[1][i] && gameState[1][i] === gameState[2][i] && gameState[0][i] !== 0) {
                 return gameState[0][i] === 1 ? "X" : "O";
             }
         }
@@ -103,12 +103,7 @@
     }
 
     function newGame(){
-        fetch("tictactoe/api/?session=" + getSession())
-        .then(response => {
-            response.text().then((link: string) => {
-                goto(link.substring(1, link.length - 1));
-            })
-        });
+        goto("/tictactoe/");
     }
 </script>
 
