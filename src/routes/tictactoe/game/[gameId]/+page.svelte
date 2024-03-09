@@ -4,6 +4,8 @@
 	import { getSession } from '$lib/sessionManager.js';
 	import { source } from 'sveltekit-sse';
     import type { PageData } from './$types.js';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
     export let data: PageData;
 
@@ -90,6 +92,24 @@
             }
         });
     }
+
+    let copied: boolean = false;
+    function copyLink() {
+        navigator.clipboard.writeText($page.url.href);
+        copied = true;
+        setTimeout(() => {
+            copied = false;
+        }, 3000);
+    }
+
+    function newGame(){
+        fetch("tictactoe/api/?session=" + getSession())
+        .then(response => {
+            response.text().then((link: string) => {
+                goto(link.substring(1, link.length - 1));
+            })
+        });
+    }
 </script>
 
 {#if gameInfo != null && gameInfo.spectator}
@@ -109,7 +129,18 @@
         {:else if gameInfo != null && gameInfo?.gameStarted && !gameInfo.yourTurn && !gameInfo.spectator && winner == null}
             Opponents Turn
         {:else if winner != null}
-            Player {winner} Wins!
+            <div class=" underline">
+                {#if winner != "-"}
+                    Player {winner} Wins!
+                {:else}
+                    Draw!
+                {/if}
+                <br>
+                <button class="px-2 rounded-full underline hover:cursor-pointer hover:text-blue-500 bg-gray-200" 
+                on:click={() => newGame()}>
+                    New Game
+                </button>
+            </div>
         {/if}
     </h2>
 </div>
@@ -119,10 +150,14 @@
         {#each gameState as row, rowIndex (rowIndex)}
             <div class="flex justify-center items-center space-x-3">
                 {#each row as col, colIndex (colIndex)}
-                    <button class=" bg-gray-300 rounded-lg lg:rounded-2xl box sm:text-2xl md:text-5xl lg:text-8xl"
+                    <button class=" bg-gray-300 rounded-lg lg:rounded-2xl box sm:text-2xl md:text-5xl lg:text-9xl"
                     on:click={() => handleButtonClick(rowIndex, colIndex)}>
-                        {#if col == 1}X{/if}
-                        {#if col == 2}O{/if}
+                        {#if col == 1}
+                            <div class="text-red-500">X</div>
+                        {/if}
+                        {#if col == 2}
+                            <div class="text-blue-500">O</div>
+                        {/if}
                     </button>
                 {/each}
             </div>
@@ -132,11 +167,11 @@
 
 
 {#if gameInfo != null && !gameInfo?.gameStarted}
-    <div class="waiting-popup sm:rounded-lg md:rounded-xl lg:rounded-3xl bg-gray-300">
+    <div class="waiting-popup sm:rounded-lg md:rounded-xl lg:rounded-3xl bg-gray-300 overflow-x-hidden">
         <div class="mt-5">
             Waiting for opponent...
         </div>
-        <div class="wrapper mt-8">
+        <div class="wrapper mt-8 mb-7">
             <div class="circle"></div>
             <div class="circle"></div>
             <div class="circle"></div>
@@ -144,6 +179,13 @@
             <div class="shadow"></div>
             <div class="shadow"></div>
         </div>
+        <button class="border-b-2 border-t-2 h-10 overflow-x-hidden flex flex-col justify-center px-3 hover:cursor-copy rounded-md hover:bg-gray-200 "
+        on:click={() => copyLink()}>
+            {$page.url.href}
+        </button>
+        {#if copied}
+            <div class="text-green-500">Copied to clipboard!</div>
+        {/if}
     </div>
 {/if}
 
