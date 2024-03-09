@@ -21,7 +21,12 @@ export class TwoPlayerGame {
         this.gameStarted = true;
         this.playerTwo = new Client(playerTwoEmit, playerTwoSession);
         this.currentPlayer = Math.random() < 0.5 ? this.playerOne : this.playerTwo;
-        this.playerOne.symbol = this.currentPlayer == this.playerOne ? "X" : "O";
+        if (this.currentPlayer.session == this.playerTwo.session) {
+            let tmp = this.playerOne;
+            this.playerOne = this.playerTwo;
+            this.playerTwo = tmp;
+        }
+        this.playerOne.symbol = this.currentPlayer.session == this.playerOne.session ? "X" : "O";
         this.playerTwo.symbol = this.playerOne.symbol == "X" ? "O" : "X";
     }
 
