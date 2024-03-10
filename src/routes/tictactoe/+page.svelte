@@ -5,6 +5,11 @@
     function createGame(){
         fetch("tictactoe/api/?session=" + getSession())
         .then(response => {
+            if (response.status === 406) {
+                alert("There are currently too many games running! \nPlease try again later!");
+                console.log("There are currently too many games running! \nPlease try again later!");
+                return;
+            }
             response.text().then((link: string) => {
                 goto(link.substring(1, link.length - 1));
             })

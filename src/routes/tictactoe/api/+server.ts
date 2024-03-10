@@ -1,11 +1,21 @@
 import { error, json, text } from "@sveltejs/kit";
 import { TwoPlayerGame } from "$lib/TwoPlayerGame";
 import { makeId } from "$lib/utilities.js";
-import { currentGames } from "../GameManager.js";
+import { clearGames, currentGames } from "../GameManager.js";
+
+const GAME_LIMIT = 100;
 
 export function GET({ url }) {	
     if (url.searchParams.get('session') == null) { error(400, "session not set!"); }
     const session: string = url.searchParams.get('session')!;
+
+    // if
+    if (currentGames.size > GAME_LIMIT) { 
+        clearGames();
+        if (currentGames.size > GAME_LIMIT) { 
+            error(406, "Too many games!"); 
+        }
+    } 
 
     // create new game and generate Link
     let link: string = makeId(8);

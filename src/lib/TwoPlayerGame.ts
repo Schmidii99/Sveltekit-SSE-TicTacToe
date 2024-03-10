@@ -8,6 +8,7 @@ export class TwoPlayerGame {
     gameStarted: boolean;
     currentPlayer: Client | null;
     spectators: Client[] = [];
+    timeCreated: number = Date.now();
 
     constructor(startState: any) {
         this.gameState = startState;
