@@ -1,75 +1,158 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import type { TwoPlayerGame } from '$lib/TwoPlayerGame.js';
+	import type { GameInfo } from '$lib/TwoPlayerGame.js';
 	import { getSession } from '$lib/sessionManager.js';
+	import { source } from 'sveltekit-sse';
     import type { PageData } from './$types.js';
-    import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
     export let data: PageData;
 
-    let game: { "gameState": any,
-            "gameStarted": boolean,
-            "yourTurn": boolean,
-            "spectator": boolean 
-            "symbol": string | null } | null = null;
+    let gameInfo: GameInfo | null = null;
+    let gameState: number[][] = [];
+    let winner: string | null = null;
 
-    // fetch game
-    async function fetchGame() {
-        if (data.gameId && browser) {
-            fetch(`/tictactoe/api?session=${getSession()}&gameId=${data.gameId}`)
-                .then(response => {
-                    if (response.status == 404) { throw Error("Game not found") }
-
-                    response.json()
-                    .then((js: any) => {
-                        game = js;
-                    })
+    $: if (data.gameId != null && browser && gameInfo == null){
+            const connection = source(`/tictactoe/game/${data.gameId}/${getSession()}/`, {close({connect}) {
+                if (calculateWinner() == null) {
+                    console.log("Connection to server closed! Reconnecting...");
+                    connect();
+                } else {
+                    console.log("Connection to server closed! Game over!");
                 }
-            ).catch(err => {
-                alert("Game not found!");
-                clearInterval(timerId);
-            })
-        }   
+            }})
+            connection.select("gameState").json<number[][]>().subscribe(gs => {
+                if (gs != null) {
+                    gameState = gs;
+                }
+            });
+            connection.select("gameInfo").json<GameInfo>().subscribe(gi => {
+                if (gi != null) {
+                    gameInfo = gi;
+                }
+            });
     }
 
-    // create timer for polling the gameState
-    let timerId: number = 0;
-    onMount(() => {
-        timerId = setInterval(fetchGame, 500);
-        fetchGame();
-    });
+    // check for winner
+    $: if (browser && gameState.length > 0) {
+        winner = calculateWinner();
+    }
+
+    function calculateWinner(): null | string {
+        for (let i = 0; i < 3; i++) {
+            // row
+            if (gameState[i][0] === gameState[i][1] && gameState[i][1] === gameState[i][2] && gameState[i][0] !== 0) {
+                return gameState[i][0] === 1 ? "X" : "O";
+            }
+            // row
+            if (gameState[0][i] === gameState[1][i] && gameState[1][i] === gameState[2][i] && gameState[0][i] !== 0) {
+                return gameState[0][i] === 1 ? "X" : "O";
+            }
+        }
+        // diagonal
+        if (gameState[0][0] === gameState[1][1] && gameState[1][1] === gameState[2][2] && gameState[0][0] !== 0) {
+            return gameState[0][0] === 1 ? "X" : "O";
+        }
+        if (gameState[0][2] === gameState[1][1] && gameState[1][1] === gameState[2][0] && gameState[0][2] !== 0) {
+            return gameState[0][2] === 1 ? "X" : "O";
+        }
+
+        // check for draw
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (gameState[i][j] === 0) {
+                    return null;
+                }
+            }
+        }
+
+        return "-";
+    }
 
     // handle button click
     function handleButtonClick(row: number, col: number) {
-        console.log("Button clicked in Row: " + row + " - Column: " + col);
+        if (gameInfo?.spectator || !gameInfo?.yourTurn || winner != null)
+            return;
+        
+        fetch("/tictactoe/api/", {
+            method: "POST",
+            body: JSON.stringify({
+                gameId: data.gameId,
+                session: getSession(),
+                column: col,
+                row: row
+            }),
+            headers: {
+                "Content-type": "application/json; charset=UTF-8"
+            }
+        }).then(response => {
+            if (!response.ok) {
+                console.log("Error when submitting data!\n" + response.status + " " + response.statusText);
+            }
+        });
+    }
+
+    let copied: boolean = false;
+    function copyLink() {
+        navigator.clipboard.writeText($page.url.href);
+        copied = true;
+        setTimeout(() => {
+            copied = false;
+        }, 3000);
+    }
+
+    function newGame(){
+        goto("/tictactoe/");
     }
 </script>
 
-{#if game != null && game.spectator}
+{#if gameInfo != null && gameInfo.spectator}
     <div class="flex justify-center">
         <h2 class=" underline text-2xl">You are spectating the game!</h2>
     </div>
 {/if}
 
-{#if game != null && game.yourTurn}
-    <div class="flex justify-center">
-        <h2 class=" underline text-xl">Your Turn</h2>
-    </div>
-{:else if game != null && game?.gameStarted && !game.yourTurn && !game.spectator}
-    <div class="flex justify-center">
-        <h2 class=" underline text-xl">Opponents Turn</h2>
-    </div>
-{/if}
+<div class="flex justify-center text-center">
+    <h2 class="text-xl">
+        {#if gameInfo != null && gameInfo.symbol != null}
+            Your symbol: {gameInfo.symbol}
+            <br>
+        {/if}
+        {#if gameInfo != null && gameInfo.yourTurn && winner == null}
+            Your Turn
+        {:else if gameInfo != null && gameInfo?.gameStarted && !gameInfo.yourTurn && !gameInfo.spectator && winner == null}
+            Opponents Turn
+        {:else if winner != null}
+            <div class=" underline">
+                {#if winner != "-"}
+                    Player {winner} Wins!
+                {:else}
+                    Draw!
+                {/if}
+                <br>
+                <button class="px-2 rounded-full underline hover:cursor-pointer hover:text-blue-500 bg-gray-200" 
+                on:click={() => newGame()}>
+                    New Game
+                </button>
+            </div>
+        {/if}
+    </h2>
+</div>
 
-{#if game != null && game.gameStarted}
+{#if gameInfo != null && gameInfo.gameStarted}
     <div class=" w-full h-full space-y-3 mt-5">
-        {#each game.gameState as row, rowIndex (rowIndex)}
+        {#each gameState as row, rowIndex (rowIndex)}
             <div class="flex justify-center items-center space-x-3">
                 {#each row as col, colIndex (colIndex)}
-                    <button class=" bg-gray-300 rounded-lg lg:rounded-2xl box sm:text-2xl md:text-5xl lg:text-8xl"
+                    <button class=" bg-gray-300 rounded-lg lg:rounded-2xl box sm:text-2xl md:text-5xl lg:text-9xl"
                     on:click={() => handleButtonClick(rowIndex, colIndex)}>
-                        {#if col == 1}X{/if}
-                        {#if col == 2}O{/if}
+                        {#if col == 1}
+                            <div class="text-red-500">X</div>
+                        {/if}
+                        {#if col == 2}
+                            <div class="text-blue-500">O</div>
+                        {/if}
                     </button>
                 {/each}
             </div>
@@ -78,12 +161,12 @@
 {/if}
 
 
-{#if game != null && !game?.gameStarted}
-    <div class="waiting-popup sm:rounded-lg md:rounded-xl lg:rounded-3xl bg-gray-300">
+{#if gameInfo != null && !gameInfo?.gameStarted}
+    <div class="waiting-popup sm:rounded-lg md:rounded-xl lg:rounded-3xl bg-gray-300 overflow-x-hidden">
         <div class="mt-5">
             Waiting for opponent...
         </div>
-        <div class="wrapper mt-8">
+        <div class="wrapper mt-8 mb-7">
             <div class="circle"></div>
             <div class="circle"></div>
             <div class="circle"></div>
@@ -91,6 +174,22 @@
             <div class="shadow"></div>
             <div class="shadow"></div>
         </div>
+        <button class="border-b-2 border-t-2 h-10 overflow-x-hidden flex flex-col justify-center px-3 hover:cursor-copy rounded-md hover:bg-gray-200 "
+        on:click={() => copyLink()}>
+            {$page.url.href}
+        </button>
+        {#if copied}
+            <div class="text-green-500">Copied to clipboard!</div>
+        {/if}
+    </div>
+{/if}
+
+{#if gameInfo != null && gameInfo.spectatorCount > 0}
+    <div class="absolute right-0 top-0 flex space-x-2 mr-2">
+        <div>
+            {gameInfo.spectatorCount}
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M15 12c0 1.654-1.346 3-3 3s-3-1.346-3-3 1.346-3 3-3 3 1.346 3 3zm9-.449s-4.252 8.449-11.985 8.449c-7.18 0-12.015-8.449-12.015-8.449s4.446-7.551 12.015-7.551c7.694 0 11.985 7.551 11.985 7.551zm-7 .449c0-2.757-2.243-5-5-5s-5 2.243-5 5 2.243 5 5 5 5-2.243 5-5z"/></svg>
     </div>
 {/if}
 
