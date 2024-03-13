@@ -1,7 +1,3 @@
-[![florianschmid.me][website-shield]][website-url]
-
-
-
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
@@ -13,9 +9,6 @@
 
   <p align="center">
     TicTacToe multiplayer built with Sveltekit using Server-Sent Events!
-    <br />
-    <a href="#showcase"><strong>view feature showcase »</strong></a>
-    <br />
     <br />
   </p>
 </div>
@@ -62,7 +55,7 @@ Here's why I needed SSE for performace reasons:
 
 Of course, this project is not optimized or perfect. But it taught me how to work with SSE and how create dynamic routing.
 
-<br>
+<br />
 
 
 ### Built With
@@ -75,7 +68,7 @@ This site was build with only a few frameworks and library:
 * [![Svelte-SEE][Svelte-SEE.com]][Svelte-SEE-url]
 
 
-<br>
+<br />
 
 <!-- GETTING STARTED -->
 ## Getting Started
@@ -101,7 +94,7 @@ This are steps to setup the project locally.
    npm install
    ```
 
-<br>
+<br />
 
 
 <!-- USAGE EXAMPLES -->
@@ -127,10 +120,16 @@ Repeat this step again if you want to spectate the game.
 <!-- SHOWCASE -->
 ## Feature Showcase
 
-Spectating a game
+<h4>Spectating a game</h4> 
+When a game is full/ started, the new client will be a spectator. Everybody can see how many spectators are currently viewing the game, by the count in the top right corner.
+
 ![Spectator Image](images/Spectator.png?raw=true "spectator")
 
-Game End
+<br />
+
+<h4> Game End </h4>
+Once the game has ended the winner is calculated client-side and displayed,  as well as button that takes you back to the "create-lobby" page. 
+
 ![Win Image](images/Win.png?raw=true "win")
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -159,7 +158,7 @@ Don't forget to give the project a star! Thanks again!
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
-<br>
+<br />
 
 
 <!-- CONTACT -->
@@ -169,7 +168,7 @@ Florian Schmid - [my website](https://florianschmid.me/) - mail@florianschmid.me
 
 Project Link: [https://github.com/Schmidii99/Sveltekit-SSE-TicTacToe/](https://github.com/Schmidii99/Sveltekit-SSE-TicTacToe/blob/main/images/Game.png)
 
-<br>
+<br />
 
 
 
